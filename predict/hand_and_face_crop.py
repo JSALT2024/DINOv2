@@ -84,6 +84,8 @@ def get_centered_box(landmarks, image_shape, box_size, scale_factor=1.5):
 def video_holistic(clip_name, clip_folder):
     clip_path = os.path.join(clip_folder, f"{clip_name}.mp4")
     json_path = os.path.join(clip_folder, f"{clip_name}.json")
+    
+
     try:
         video = decord.VideoReader(clip_path)
     except Exception as e:
@@ -102,36 +104,27 @@ def video_holistic(clip_name, clip_folder):
     out_face = []
     out_hand1 = []
     out_hand2 = []
+    
+    # check if video and keypoints have same number of frames
+    frames = len(video)
+    keypoints = len(result_dict)
+    if frames != keypoints:
+        print("frames", frames)
+        print("keypoints", keypoints)
+        print(clip_path)
+        print(json_path)
 
-    for i in range(len(video)):
+    for i in range(np.min([frames, keypoints])):
         frame = video[i].asnumpy()
         video.seek(0)
-        if result_dict[str(i)] is None:  # no pose_landmarks detected
+        
+        if result_dict[str(i)] == []:  # no pose_landmarks detected
             if prev_result_dict is not None:  # use the previous pose_landmarks
                 result_dict[str(i)] = prev_result_dict
             else:  # use a blank frame if no pose_landmarks was ever detected for this clip
                 continue
         else:  # store pose_landmarks detected as last known pose_landmarks
             prev_result_dict = result_dict[str(i)]
-
-        if result_dict[str(i)]['pose_landmarks'] is None:  # some pose_landmarks were detected
-            if prev_face_frame is not None:
-                out_face.append(prev_face_frame)
-            else:
-                face_frame = np.zeros((56, 56, 3), dtype=np.uint8)
-                out_face.append(face_frame)
-            if prev_hand1_frame is not None:
-                out_hand1.append(prev_hand1_frame)
-            else:
-                hand1_frame = np.zeros((56, 56, 3), dtype=np.uint8)
-                out_hand1.append(hand1_frame)
-            if prev_hand2_frame is not None:
-                out_hand2.append(prev_hand2_frame)
-            else:
-                hand2_frame = np.zeros((56, 56, 3), dtype=np.uint8)
-                out_hand2.append(hand2_frame)
-
-            continue
 
         # it contains a body pose that can be use as reference to get the face and hands
         if result_dict[str(i)]['face_landmarks']:  # some face_landmarks were detected
