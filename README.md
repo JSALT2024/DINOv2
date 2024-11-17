@@ -1,4 +1,15 @@
 
+## Create dino feature h5 dataset
+```shell
+python predict/create_dino_features.py \
+  --input_folder data/cropped_clips
+  --output_folder data/features
+  --dataset_name h2s \
+  --split_name train \
+  --annotation_file data\how2sign_realigned_train.csv   # only if the name is in wrong format
+```
+
+
 ## Predict (embedding)
 ```Python
 import sys
