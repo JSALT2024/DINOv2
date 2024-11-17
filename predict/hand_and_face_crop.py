@@ -30,6 +30,22 @@ def get_bounding_box(landmarks, image_shape, scale_factor=1.2):
     h += 2 * h_padding
     return x, y, w, h
 
+def get_centered_box(keypoints, box_size, scale_factor=1.2):
+    center_x, center_y = np.mean(keypoints, axis=0, dtype=int)
+    half_size = box_size // 2
+    x = center_x - half_size
+    y = center_y - half_size
+    w = box_size
+    h = box_size
+
+    w_padding = int((scale_factor - 1) * w / 2)
+    h_padding = int((scale_factor - 1) * h / 2)
+    x -= w_padding
+    y -= h_padding
+    w += 2 * w_padding
+    h += 2 * h_padding
+
+    return x, y, w, h
 
 def adjust_bounding_box(bounding_box, image_shape):
     x, y, w, h = bounding_box
@@ -57,26 +73,6 @@ def adjust_bounding_box(bounding_box, image_shape):
     # Ensure bounding box's x and y coordinates are not negative
     x = max(x, 0)
     y = max(y, 0)
-
-    return x, y, w, h
-
-
-def get_centered_box(landmarks, image_shape, box_size, scale_factor=1.5):
-    ih, iw, _ = image_shape
-    landmarks_px = np.array([(int(l[0] * iw), int(l[1] * ih)) for l in landmarks])
-    center_x, center_y = np.mean(landmarks_px, axis=0, dtype=int)
-    half_size = box_size // 2
-    x = center_x - half_size
-    y = center_y - half_size
-    w = box_size
-    h = box_size
-
-    w_padding = int((scale_factor - 1) * w / 2)
-    h_padding = int((scale_factor - 1) * h / 2)
-    x -= w_padding
-    y -= h_padding
-    w += 2 * w_padding
-    h += 2 * h_padding
 
     return x, y, w, h
 
@@ -128,10 +124,15 @@ def video_holistic(clip_name, clip_folder):
 
         # it contains a body pose that can be use as reference to get the face and hands
         if result_dict[str(i)]['face_landmarks']:  # some face_landmarks were detected
+            # face_box = get_bounding_box(face_lmks, frame.shape)
+            # face_box = adjust_bounding_box(face_box, frame.shape)  # to make sure it is within the frame
+            # face_frame = crop_frame(frame, face_box)
             face_lmks = result_dict[str(i)]['face_landmarks']
-            face_box = get_bounding_box(face_lmks, frame.shape)
-            face_box = adjust_bounding_box(face_box, frame.shape)  # to make sure it is within the frame
-            face_frame = crop_frame(frame, face_box)
+            face_lmks = np.round(np.array(face_lmks)[:, :2]).astype(int)
+            x, y, w, h = cv2.boundingRect(face_lmks)
+            face_frame = get_centered_box(face_lmks, np.max([w, h]), scale_factor=1.2)
+            face_frame = adjust_bounding_box(face_frame, frame.shape)  # to make sure it is within the frame
+            face_frame = crop_frame(frame, face_frame)
             face_frame = resize_frame(face_frame, (56, 56))
             out_face.append(face_frame)
             prev_face_frame = face_frame
@@ -141,11 +142,17 @@ def video_holistic(clip_name, clip_folder):
             # use a blank frame if no face_landmarks or body_landmarks were detected
             face_frame = np.zeros((56, 56, 3), dtype=np.uint8)
             out_face.append(face_frame)
-
+    
         if result_dict[str(i)]['left_hand_landmarks']:
-            hand1_box = get_bounding_box(result_dict[str(i)]['left_hand_landmarks'], frame.shape, scale_factor=1.2)
-            hand1_box = adjust_bounding_box(hand1_box, frame.shape)
-            hand1_frame = crop_frame(frame, hand1_box)
+            # hand1_box = get_bounding_box(result_dict[str(i)]['left_hand_landmarks'], frame.shape, scale_factor=1.2)
+            # hand1_box = adjust_bounding_box(hand1_box, frame.shape)
+            # hand1_frame = crop_frame(frame, hand1_box)
+            hand1_lmks = result_dict[str(i)]['left_hand_landmarks']
+            hand1_lmks = np.round(np.array(hand1_lmks)[:, :2]).astype(int)
+            x, y, w, h = cv2.boundingRect(hand1_lmks)
+            hand1_frame = get_centered_box(hand1_lmks, np.max([w, h]), scale_factor=1.2)
+            hand1_frame = adjust_bounding_box(hand1_frame, frame.shape)  # to make sure it is within the frame
+            hand1_frame = crop_frame(frame, hand1_frame)
             hand1_frame = resize_frame(hand1_frame, (56, 56))
             out_hand1.append(hand1_frame)
             prev_hand1_frame = hand1_frame
@@ -156,9 +163,15 @@ def video_holistic(clip_name, clip_folder):
             out_hand1.append(hand1_frame)
 
         if result_dict[str(i)]['right_hand_landmarks']:
-            hand2_box = get_bounding_box(result_dict[str(i)]['right_hand_landmarks'], frame.shape, scale_factor=1.2)
-            hand2_box = adjust_bounding_box(hand2_box, frame.shape)
-            hand2_frame = crop_frame(frame, hand2_box)
+            # hand2_box = get_bounding_box(result_dict[str(i)]['right_hand_landmarks'], frame.shape, scale_factor=1.2)
+            # hand2_box = adjust_bounding_box(hand2_box, frame.shape)
+            # hand2_frame = crop_frame(frame, hand2_box)
+            hand2_lmks = result_dict[str(i)]['right_hand_landmarks']
+            hand2_lmks = np.round(np.array(hand2_lmks)[:, :2]).astype(int)
+            x, y, w, h = cv2.boundingRect(hand2_lmks)
+            hand2_frame = get_centered_box(hand2_lmks, np.max([w, h]), scale_factor=1.2)
+            hand2_frame = adjust_bounding_box(hand2_frame, frame.shape)  # to make sure it is within the frame
+            hand2_frame = crop_frame(frame, hand2_frame)
             hand2_frame = resize_frame(hand2_frame, (56, 56))
             out_hand2.append(hand2_frame)
             prev_hand2_frame = hand2_frame
