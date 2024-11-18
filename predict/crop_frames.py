@@ -5,7 +5,23 @@ import json
 
 
 def crop_frame(image, bounding_box):
+    h, w = image.shape[:2]
     x0, y0, x1, y1 = bounding_box
+    # fix box if out of the frame
+    if x0 < 0:
+        x1 += np.abs(x0)
+        x0 = 0
+    if y0 < 0:
+        y1 += np.abs(y0)
+        y0 = 0
+    if x1 > w:
+        dif = x1 - w
+        x0 -= dif
+        x1 = w
+    if y1 > h:
+        dif = y1 - h
+        y0 -= dif
+        y1 = h
     cropped_frame = image[y0:y1, x0:x1]
     return cropped_frame
 
